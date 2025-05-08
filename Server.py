@@ -155,6 +155,7 @@ class ClientHandler(threading.Thread):
             self.conn.close()
             print("Client disconnected:", self.addr)
 
+# Displays the summary of the current tuple space
 def print_stats(tuple_space, interval=10):
     while True:
         time.sleep(interval)
