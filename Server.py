@@ -155,3 +155,41 @@ class ClientHandler(threading.Thread):
             self.conn.close()
             print("Client disconnected:", self.addr)
 
+def print_stats(tuple_space, interval=10):
+    while True:
+        time.sleep(interval)
+        stats = tuple_space.get_stats()
+        print("Server Stats (every {}s):".format(interval))
+        print("Tuples: {}".format(stats['num_tuples']))
+        print("Avg tuple size: {:.2f}".format(stats['avg_tuple_size']))
+        print("Avg key size: {:.2f}".format(stats['avg_key_size']))
+        print("Avg value size: {:.2f}".format(stats['avg_value_size']))
+        print("Total clients: {}".format(stats['total_clients']))
+        print("Total operations: {}".format(stats['total_operations']))
+        print("READs: {}, GETs: {}, PUTs: {}".format(
+            stats['total_reads'], stats['total_gets'], stats['total_puts']))
+        print("Errors: {}".format(stats['total_errors']))
+
+def start_server(port):
+    tuple_space = TupleSpace()
+    
+    # Start stats thread
+    stats_thread = threading.Thread(target=print_stats, args=(tuple_space,), daemon=True)
+    stats_thread.start()
+    
+    # Create server socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(('0.0.0.0', port))
+        s.listen()
+        print("Server listening on port", port)
+        
+        try:
+            while True:
+                conn, addr = s.accept()
+                client_handler = ClientHandler(conn, addr, tuple_space)
+                client_handler.start()
+        except KeyboardInterrupt:
+            print("Server shutting down...")
+        finally:
+            s.close()
